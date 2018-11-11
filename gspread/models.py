@@ -39,6 +39,32 @@ except NameError:
     basestring = unicode = str
 
 
+class Editor:
+    def __init__(self, values):
+        self.values = values
+        self.updates = dict()
+
+    def _get_real_addr(self, col, row):
+        header = self.values[0]
+        col_idx = header.index(col)
+        return (row + 1, col_idx)
+
+    def __getitem__(self, key):
+        row, col = addr = self._get_real_addr(key.start, key.stop)
+
+        if addr in self.updates:
+            return self.updates[addr]
+        else:
+            return self.values[row][col]
+
+    def __setitem__(self, key, value):
+        addr = self._get_real_addr(key.start, key.stop)
+        self.updates[addr] = value
+
+    def cells(self):
+        return [Cell(r + 1, c + 1, v) for (r, c), v in self.updates.items()]
+
+
 class Spreadsheet(object):
     """The class that represents a spreadsheet."""
     def __init__(self, client, properties):
@@ -589,6 +615,9 @@ class Worksheet(object):
             return fill_gaps(data['values'])
         except KeyError:
             return []
+
+    def get_editor(self):
+        return Editor(self.get_all_values())
 
     def get_all_records(
         self,
